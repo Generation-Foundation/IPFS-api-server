@@ -14,7 +14,9 @@ model Cid {
   id      Int     @id @default(autoincrement())
   cid  String
   account String
-  size Int
+  size BigInt
   uploadedAt DateTime @default(now())
   type String
+  fileid BigInt
+
 }
