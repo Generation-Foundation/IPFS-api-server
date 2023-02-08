@@ -13,5 +13,8 @@ datasource db {
 model Cid {
   id      Int     @id @default(autoincrement())
   cid  String
+  account String
+  size Int
+  uploadedAt DateTime @default(now())
   type String
 }
