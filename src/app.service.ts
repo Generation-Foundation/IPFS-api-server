@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CidDto } from './dto/cid.dto';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class AppService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private readonly httpService: HttpService,
+  ) {}
 
+  //Cid 등록
   async addCid(cidDto: CidDto): Promise<object> {
     const { cid, account, type, size } = cidDto;
 
@@ -25,14 +31,16 @@ export class AppService {
 
       const foundFileId = await this.prismaService.cid.findUnique({
         where: {
-          //   fileid: fileid,
-          fileid: '1677725560545658699225',
+          fileid: fileid,
         },
       });
 
       if (foundFileId) {
-        //이미 있는 fileId이기 때문에 501 반환, 해당 cid로 재요청 필요
-        return { statusCode: 501, data: { cid: cid } };
+        return {
+          success: false,
+          message: '동일한 cid로 다시 시도해주세요.',
+          data: { cid: cid },
+        };
       } else {
         const createResult = await this.prismaService.cid.create({
           data: {
@@ -44,7 +52,8 @@ export class AppService {
           },
         });
         return {
-          statusCode: 201,
+          success: true,
+          message: 'cid가 정상적으로 등록되었습니다.',
           data: {
             fileid: createResult.fileid,
             url: `http://ipfs.gen.foundation/ipfs/${cid}`,
@@ -53,7 +62,62 @@ export class AppService {
       }
     } catch (error) {
       console.log(error);
-      return { statusCode: 500, data: { error: error } };
+      return {
+        success: false,
+        message: '예상치 못한 오류가 발생했습니다.',
+        data: {},
+      };
+    }
+  }
+
+  //FileId 체크
+  async findFile(fileid: CidDto['cid']): Promise<any> {
+    const foundCid = await this.prismaService.cid.findUnique({
+      where: {
+        fileid: fileid,
+      },
+    });
+    if (!foundCid) {
+      return {
+        success: false,
+        message: '유효하지 않은 fileid 입니다.',
+        data: false,
+      };
+    } else {
+      const cid = foundCid.cid;
+      try {
+        const { data } = await firstValueFrom(
+          this.httpService.post(
+            `http://ipfs.gen.foundation:5001/api/v0/block/stat?arg=${cid}`,
+          ),
+        );
+        if (data) {
+          console.log(data);
+          return {
+            success: true,
+            message: '유효한 fileid 입니다.',
+            data: true,
+          };
+        } else
+          return {
+            success: false,
+            message: '예상치 못한 오류가 발생했습니다.',
+            data: false,
+          };
+      } catch (err) {
+        if (err.message?.startsWith('timeout'))
+          return {
+            success: false,
+            message: '유효하지 않은 fileid 입니다.',
+            data: false,
+          };
+
+        return {
+          success: false,
+          message: '예상치 못한 오류가 발생했습니다.',
+          data: false,
+        };
+      }
     }
   }
 }

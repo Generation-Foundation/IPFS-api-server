@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { AppService } from './app.service';
 import { CidDto } from './dto/cid.dto';
 
@@ -6,9 +6,15 @@ import { CidDto } from './dto/cid.dto';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Post('/addcid')
-  async insertCoin(@Body() cidDto: CidDto): Promise<object> {
+  @Post('/cid/upload')
+  async upload(@Body() cidDto: CidDto): Promise<object> {
     const result = await this.appService.addCid(cidDto);
+    return result;
+  }
+
+  @Get('/cid/valid/:fileid')
+  async getFileId(@Param('fileid') fileid: CidDto['cid']): Promise<any> {
+    const result = this.appService.findFile(fileid);
     return result;
   }
 }
