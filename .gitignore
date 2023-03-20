@@ -4,6 +4,7 @@
 package-lock.json
 
 .env
+/src/constants
 
 # Logs
 logs
