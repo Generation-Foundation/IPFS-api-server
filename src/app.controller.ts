@@ -1,18 +1,20 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { CidDto } from './dto/cid.dto';
+import { JwtAuthGuard } from './guards/auth.guard';
 
-@Controller()
+@Controller('cid')
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Post('/cid/upload')
+  @Post('upload')
+  @UseGuards(JwtAuthGuard)
   async upload(@Body() cidDto: CidDto): Promise<object> {
     const result = await this.appService.addCid(cidDto);
     return result;
   }
-
-  @Get('/cid/valid/:fileid')
+  @Get('valid/:fileid')
+  @UseGuards(JwtAuthGuard)
   async getFileId(@Param('fileid') fileid: CidDto['cid']): Promise<any> {
     const result = this.appService.findFile(fileid);
     return result;

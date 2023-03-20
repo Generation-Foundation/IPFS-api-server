@@ -15,17 +15,18 @@ export class AuthController {
   ): Promise<any> {
     const getHeader = headers['authorization'];
     const { address } = Web3Token.verify(getHeader);
-    const token = await this.authService.getCookieWithJWT(address);
-
-    res.cookie('JWT', token.accessToken, {
+    const accesstoken = await this.authService.getCookieWithJWT(address);
+    res.cookie('JWT', accesstoken, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, //1 day
     });
-    return res.send({ message: 'success' });
+    return res.send({ message: '로그인 성공' });
   }
 
   @Post('logout')
-  logout(@Req() req, @Res() res): any {
+  async logout(@Req() req, @Res() res): Promise<any> {
+    //redis-store에서 삭제하는 로직 추가 필요
+    // const test = await this.authService.deleteCache(req.cookie);
     res.cookie('JWT', '', {
       maxAge: 0,
     });

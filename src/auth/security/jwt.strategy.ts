@@ -13,7 +13,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request) => {
-          console.log('요청들어온 쿠키 검증 중', request.cookies);
           return request?.cookies?.JWT;
         },
       ]),
@@ -23,16 +22,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JWTPayload, done: VerifiedCallback): Promise<any> {
-    const user = await this.authService.tokenValidateUser(payload);
-    console.log(user, 'user');
-    if (!user) {
-      console.log('not user');
+    const isExists = await this.authService.tokenValidateUser(payload);
+    if (!isExists) {
       return done(
-        new UnauthorizedException({ message: 'user does not exist' }),
+        new UnauthorizedException({
+          message: '유효하지 않은 metamask-address 입니다.',
+        }),
         false,
       );
     }
 
-    return done(null, user);
+    return done(null, isExists);
   }
 }
