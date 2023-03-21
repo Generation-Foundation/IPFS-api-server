@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CidDto } from './dto/cid.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { ethers } from 'ethers';
+import { metamask, otcContract } from './constants/constants';
 
 @Injectable()
 export class AppService {
@@ -119,5 +121,18 @@ export class AppService {
         };
       }
     }
+  }
+
+  //컨트랙 체크
+  async test(fileid: CidDto['cid']): Promise<any> {
+    const metamaskPrivateKey = metamask.privateKey;
+    const provider = new ethers.JsonRpcProvider(metamask.testNetURL);
+    const signer = new ethers.Wallet(metamaskPrivateKey, provider);
+    const otcAddress = otcContract.otcAddress;
+    const otcAbi = otcContract.otcContractAbi;
+    const contract = new ethers.Contract(otcAddress, otcAbi, signer);
+
+    //OTC컨트랙트 수정 후 세부 로직 추가 필요
+    return 'anything';
   }
 }

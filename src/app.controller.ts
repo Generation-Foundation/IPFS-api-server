@@ -19,4 +19,11 @@ export class AppController {
     const result = this.appService.findFile(fileid);
     return result;
   }
+
+  @Post('contract/:fileid')
+  @UseGuards(JwtAuthGuard)
+  async checkContract(@Param('fileid') fileid: CidDto['cid']): Promise<any> {
+    const result = await this.appService.test(fileid);
+    return result;
+  }
 }
