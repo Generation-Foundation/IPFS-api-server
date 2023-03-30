@@ -3,8 +3,14 @@
 /node_modules
 package-lock.json
 
+#env
 .env
+
+#constants
 /src/constants
+
+#migration
+/prisma/migrations
 
 # Logs
 logs
