@@ -10,13 +10,85 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Cid {
+model File {
   id      Int     @id @default(autoincrement())
   cid  String
   account String
   size String
-  uploadedAt DateTime @default(now())
+  uploaded_at DateTime @default(now())
   type String
   fileid String @unique
+  Product Product? //1:1 관계
+}
+model Product {
+  id      Int     @id @default(autoincrement())
+  fileid String @unique
+  seller String
+  product_name  String
+  product_price String
+  product_thumbnail_url String
+  product_is_public Boolean
+  product_status String
+  product_volume_to_sales Int
+  product_limit_of_sales Int
+  product_uploaded_at DateTime @default(now())
 
+  file File @relation(fields: [fileid], references: [fileid])
+  Product_detail Product_detail? //1:1 관계
+  Product_required_token Product_required_token[] //1:N 관계
+  Product_order_history Order_history[] //1:N 관계
+
+@@index([product_volume_to_sales], name: "product_volume_to_sales")
+@@index([product_uploaded_at], name: "product_uploaded_at")
+}
+
+model Product_detail {
+  id      Int     @id @default(autoincrement())
+  product_id  Int @unique
+  product_content String
+  product Product @relation(fields: [product_id], references: [id])
+}
+
+model Token {
+  id      Int     @id @default(autoincrement())
+  token_contract  Int @unique
+  token_sym String
+  token_name String
+
+  Product_required_token Product_required_token[] //1:N 관계
+}
+
+model Product_required_token {
+  id      Int     @id @default(autoincrement())
+  product_id Int
+  token_id Int
+  product Product @relation(fields: [product_id], references: [id])
+  token Token @relation(fields: [token_id], references: [id])
+  
+  Order_history Order_history[] // N:M 관계
+}
+
+model Order_history {
+  id      Int     @id @default(autoincrement())
+  product_id  Int 
+  porduct_price String
+  seller String
+  buyer String
+  exchange_rate String
+  token_type String
+  history_created_at DateTime @default(now())
+
+  report_record Report_record? //1:1 관계
+  product Product @relation(fields: [product_id], references: [id])
+  Product_required_token Product_required_token[] //N:M 관계
+}
+
+model Report_record {
+  id      Int     @id @default(autoincrement())
+  order_history_id  Int @unique
+  report_content String
+  report_created_at DateTime @default(now())
+  auther String
+
+  order_history Order_history @relation(fields: [order_history_id], references: [id])
 }
