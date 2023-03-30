@@ -24,7 +24,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(@Req() req, @Res() res): Promise<any> {
+  async logout(@Req() req: Request, @Res() res: Response): Promise<any> {
     //redis-store에서 삭제하는 로직 추가 필요
     // const test = await this.authService.deleteCache(req.cookie);
     res.cookie('JWT', '', {

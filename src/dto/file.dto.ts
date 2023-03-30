@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class CidDto {
+export class FileDto {
   @IsNotEmpty()
   @IsString()
   cid: string;

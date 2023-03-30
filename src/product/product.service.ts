@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CidDto } from './dto/cid.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { FileDto } from '../dto/file.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ethers } from 'ethers';
-import { metamask, otcContract } from './constants/constants';
+import { metamask, otcContract } from '../constants/constants';
 
 @Injectable()
-export class AppService {
+export class ProductService {
   constructor(
     private prismaService: PrismaService,
     private readonly httpService: HttpService,
   ) {}
 
-  //Cid 등록
-  async addCid(cidDto: CidDto): Promise<object> {
-    const { cid, account, type, size } = cidDto;
+  //file 등록
+  async addCid(fileDto: FileDto): Promise<object> {
+    const { cid, account, type, size } = fileDto;
 
     try {
       const date: any = new Date();
@@ -31,7 +31,7 @@ export class AppService {
       const convertedCid = cid.replace(regex, '');
       const fileid = convertedUnixDate + convertedCid;
 
-      const foundFileId = await this.prismaService.cid.findUnique({
+      const foundFileId = await this.prismaService.file.findUnique({
         where: {
           fileid: fileid,
         },
@@ -44,7 +44,7 @@ export class AppService {
           data: { cid: cid },
         };
       } else {
-        const createResult = await this.prismaService.cid.create({
+        const createResult = await this.prismaService.file.create({
           data: {
             cid: cid,
             account: account,
@@ -55,10 +55,10 @@ export class AppService {
         });
         return {
           success: true,
-          message: 'cid가 정상적으로 등록되었습니다.',
+          message: '파일이 정상적으로 등록되었습니다.',
           data: {
             fileid: createResult.fileid,
-            url: `http://ipfs.gen.foundation/ipfs/${cid}`,
+            url: `http://ipfs.gen.foundation/ipfs/${createResult.cid}`,
           },
         };
       }
@@ -73,28 +73,26 @@ export class AppService {
   }
 
   //FileId 체크
-  async findFile(fileid: CidDto['cid']): Promise<any> {
-    const foundCid = await this.prismaService.cid.findUnique({
+  async findFile(fileid: FileDto['cid']): Promise<any> {
+    const foundFile = await this.prismaService.file.findUnique({
       where: {
         fileid: fileid,
       },
     });
-    if (!foundCid) {
+    if (!foundFile) {
       return {
         success: false,
         message: '유효하지 않은 fileid 입니다.',
         data: false,
       };
     } else {
-      const cid = foundCid.cid;
       try {
         const { data } = await firstValueFrom(
           this.httpService.post(
-            `http://ipfs.gen.foundation:5001/api/v0/block/stat?arg=${cid}`,
+            `http://ipfs.gen.foundation:5001/api/v0/block/stat?arg=${foundFile.cid}`,
           ),
         );
         if (data) {
-          console.log(data);
           return {
             success: true,
             message: '유효한 fileid 입니다.',
@@ -124,7 +122,7 @@ export class AppService {
   }
 
   //컨트랙 체크
-  async test(fileid: CidDto['cid']): Promise<any> {
+  async test(fileid: FileDto['cid']): Promise<any> {
     const metamaskPrivateKey = metamask.privateKey;
     const provider = new ethers.JsonRpcProvider(metamask.testNetURL);
     const signer = new ethers.Wallet(metamaskPrivateKey, provider);
@@ -133,6 +131,23 @@ export class AppService {
     const contract = new ethers.Contract(otcAddress, otcAbi, signer);
 
     //OTC컨트랙트 수정 후 세부 로직 추가 필요
-    return 'anything';
+    const foundFileId = await this.prismaService.file.findUnique({
+      select: {
+        cid: true,
+        type: true,
+      },
+      where: {
+        fileid: fileid,
+      },
+    });
+
+    return {
+      success: true,
+      message: '유효한 fileid 입니다.',
+      data: {
+        URL: `http://ipfs.gen.foundation:8080/ipfs/${foundFileId.cid}`,
+        fileType: foundFileId.type,
+      },
+    };
   }
 }
