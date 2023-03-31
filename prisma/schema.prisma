@@ -12,48 +12,55 @@ datasource db {
 
 model File {
   id      Int     @id @default(autoincrement())
-  cid  String
-  account String
-  size String
+  cid  String 
+  account String //업로드한 계정
+  size String 
+  mimetype String  //확장자명
+  file_id String @unique
   uploaded_at DateTime @default(now())
-  type String
-  fileid String @unique
+
   Product Product? //1:1 관계
 }
+
 model Product {
   id      Int     @id @default(autoincrement())
-  fileid String @unique
-  seller String
-  product_name  String
-  product_price String
-  product_thumbnail_url String
-  product_is_public Boolean
-  product_status String
-  product_volume_to_sales Int
-  product_limit_of_sales Int
-  product_uploaded_at DateTime @default(now())
+  file_id String @unique 
+  seller String //판매자
+  name  String //상품명
+  content String //상품설명
+  price Int //상품가격
+  thumbnail_url String 
+  is_public Boolean @default(true) //공개, 비공개
+  status Boolean @default(true) //판매중 or 판매종료
+  volume_to_sales Int @default(0) //판매량
+  limit_of_sales Int @default(1) //최대 판매량
+  uploaded_at DateTime @default(now())
 
-  file File @relation(fields: [fileid], references: [fileid])
-  Product_detail Product_detail? //1:1 관계
+  file File @relation(fields: [file_id], references: [file_id])
+
   Product_required_token Product_required_token[] //1:N 관계
   Product_order_history Order_history[] //1:N 관계
-
-@@index([product_volume_to_sales], name: "product_volume_to_sales")
-@@index([product_uploaded_at], name: "product_uploaded_at")
+  Product_image Product_image[] //1:N 관계
+  
+  @@index([seller], name: "seller")
+  @@index([status], name: "status")
+  @@index([volume_to_sales], name: "volume_to_sales")
+  @@index([uploaded_at], name: "uploaded_at")
 }
 
-model Product_detail {
+model Product_image {
   id      Int     @id @default(autoincrement())
-  product_id  Int @unique
-  product_content String
+  image_url String
+  product_id Int
+
   product Product @relation(fields: [product_id], references: [id])
 }
 
 model Token {
   id      Int     @id @default(autoincrement())
-  token_contract  Int @unique
-  token_sym String
-  token_name String
+  contract  String @unique
+  symbol String
+  name String
 
   Product_required_token Product_required_token[] //1:N 관계
 }
@@ -62,33 +69,37 @@ model Product_required_token {
   id      Int     @id @default(autoincrement())
   product_id Int
   token_id Int
+
   product Product @relation(fields: [product_id], references: [id])
   token Token @relation(fields: [token_id], references: [id])
-  
+
   Order_history Order_history[] // N:M 관계
+
+  @@index([product_id], name: "product_id")
+  @@index([token_id], name: "token_id")
 }
 
 model Order_history {
   id      Int     @id @default(autoincrement())
   product_id  Int 
-  porduct_price String
-  seller String
-  buyer String
+  product_buyer String
   exchange_rate String
-  token_type String
-  history_created_at DateTime @default(now())
+  token String
+  status String @default("ORDER_COMPLETE") //거래완료 or 거래취소(환불)
+  created_at DateTime @default(now())
+  
+  product Product @relation(fields: [product_id], references: [id])
 
   report_record Report_record? //1:1 관계
-  product Product @relation(fields: [product_id], references: [id])
   Product_required_token Product_required_token[] //N:M 관계
 }
 
 model Report_record {
   id      Int     @id @default(autoincrement())
   order_history_id  Int @unique
-  report_content String
-  report_created_at DateTime @default(now())
-  auther String
+  content String
+  created_at DateTime @default(now())
+  author String
 
   order_history Order_history @relation(fields: [order_history_id], references: [id])
 }
