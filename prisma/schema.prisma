@@ -55,7 +55,7 @@ model Product_image {
   product_id Int
   sequence Int
   
-  product Product @relation(fields: [product_id], references: [id])
+  Product Product @relation(fields: [product_id], references: [id])
 }
 
 model Token {
@@ -72,8 +72,8 @@ model Product_required_token {
   product_id Int
   token_id Int
 
-  product Product @relation(fields: [product_id], references: [id])
-  token Token @relation(fields: [token_id], references: [id])
+  Product Product @relation(fields: [product_id], references: [id])
+  Token Token @relation(fields: [token_id], references: [id])
 
   Order_history Order_history[] // N:M 관계
 
@@ -90,9 +90,9 @@ model Order_history {
   status String @default("ORDER_COMPLETE") //거래완료 or 거래취소(환불)
   created_at DateTime @default(now())
   
-  product Product @relation(fields: [product_id], references: [id])
+  Product Product @relation(fields: [product_id], references: [id])
 
-  report_record Report_record? //1:1 관계
+  Report_record Report_record? //1:1 관계
   Product_required_token Product_required_token[] //N:M 관계
 }
 
@@ -103,5 +103,5 @@ model Report_record {
   created_at DateTime @default(now())
   author String
 
-  order_history Order_history @relation(fields: [order_history_id], references: [id])
+  Order_history Order_history @relation(fields: [order_history_id], references: [id])
 }
