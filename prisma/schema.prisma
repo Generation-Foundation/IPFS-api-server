@@ -12,6 +12,7 @@ datasource db {
 
 model File {
   id      Int     @id @default(autoincrement())
+  product_id Int @unique
   cid  String 
   account String //업로드한 계정
   size String 
@@ -19,24 +20,24 @@ model File {
   file_id String @unique
   uploaded_at DateTime @default(now())
 
-  Product Product? //1:1 관계
+  Product Product @relation(fields: [product_id], references: [id])
 }
 
 model Product {
   id      Int     @id @default(autoincrement())
-  file_id String @unique 
   seller String //판매자
-  name  String //상품명
+  title  String //상품명
   content String //상품설명
-  price Int //상품가격
+  price String //상품가격
   thumbnail_url String 
   is_public Boolean @default(true) //공개, 비공개
-  status Boolean @default(true) //판매중 or 판매종료
+  status Boolean @default(false) //판매중 or 판매중지
   volume_to_sales Int @default(0) //판매량
   limit_of_sales Int @default(1) //최대 판매량
-  uploaded_at DateTime @default(now())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
 
-  file File @relation(fields: [file_id], references: [file_id])
+  File File? //1:1 관계
 
   Product_required_token Product_required_token[] //1:N 관계
   Product_order_history Order_history[] //1:N 관계
@@ -45,14 +46,15 @@ model Product {
   @@index([seller], name: "seller")
   @@index([status], name: "status")
   @@index([volume_to_sales], name: "volume_to_sales")
-  @@index([uploaded_at], name: "uploaded_at")
+  @@index([created_at], name: "created_at")
 }
 
 model Product_image {
   id      Int     @id @default(autoincrement())
-  image_url String
+  url String
   product_id Int
-
+  sequence Int
+  
   product Product @relation(fields: [product_id], references: [id])
 }
 
