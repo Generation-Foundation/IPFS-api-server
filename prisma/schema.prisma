@@ -13,11 +13,9 @@ datasource db {
 model File {
   id      Int     @id @default(autoincrement())
   product_id Int @unique
-  cid  String 
-  account String //업로드한 계정
-  size String 
-  mimetype String  //확장자명
   file_id String @unique
+  download_url  String
+  uploaded_platform String //업로드한 플랫폼
   uploaded_at DateTime @default(now())
 
   Product Product @relation(fields: [product_id], references: [id])
@@ -29,7 +27,7 @@ model Product {
   title  String //상품명
   content String //상품설명
   price String //상품가격
-  thumbnail_url String 
+  thumbnail_url String
   is_public Boolean @default(true) //공개, 비공개
   status Boolean @default(false) //판매중 or 판매중지
   volume_to_sales Int @default(0) //판매량
