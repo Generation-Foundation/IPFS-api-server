@@ -1,19 +1,15 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
-export class FileDto {
+export class FileUploadDto {
   @IsNotEmpty()
   @IsString()
   cid: string;
 
   @IsNotEmpty()
-  @IsString()
-  account: string;
+  @IsNumber()
+  productId: number;
 
   @IsNotEmpty()
   @IsString()
-  size: string;
-
-  @IsNotEmpty()
-  @IsString()
-  type: string;
+  platform: string;
 }

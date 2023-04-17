@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { IpfsService } from './ipfs.service';
-import { FileDto } from '../dto/fileUpload.dto';
+import { FileUploadDto } from '../dto/fileUpload.dto';
 import { JwtAuthGuard } from '../guards/auth.guard';
 
 @Controller('ipfs')
@@ -9,7 +9,7 @@ export class IpfsController {
 
   @Post('upload')
   @UseGuards(JwtAuthGuard)
-  async uploadFile(@Body() fileDto: FileDto): Promise<object> {
+  async uploadFile(@Body() fileDto: FileUploadDto): Promise<object> {
     const result = await this.ipfsService.createFile(fileDto);
     return result;
   }
