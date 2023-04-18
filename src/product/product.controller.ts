@@ -13,11 +13,9 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { ProductService } from './product.service';
-import { ProductDto, CreateDto } from 'src/dto/product.dto';
+import { UpdatetDto, CreateDto } from 'src/dto/product.dto';
 import { JwtAuthGuard } from '../guards/auth.guard';
 import { UploadImageDto } from 'src/dto/query.dto';
-import { ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Result } from 'ethers';
 
 @Controller('product')
 export class ProductController {
@@ -30,7 +28,7 @@ export class ProductController {
   }
 
   @Get('/detail/:id')
-  async getProduct(@Param('id') id: ProductDto['product_id']): Promise<any> {
+  async getProduct(@Param('id') id: number): Promise<any> {
     const result = await this.productService.findProduct(id);
     return result;
   }
@@ -44,9 +42,9 @@ export class ProductController {
     return result;
   }
 
-  @Post('/upload')
-  @UseGuards(JwtAuthGuard)
-  async uploadProduct(@Body() productDto: ProductDto): Promise<any> {
+  @Post('/update')
+  // @UseGuards(JwtAuthGuard)
+  async uploadProduct(@Body() productDto: UpdatetDto): Promise<any> {
     const result = await this.productService.updateProduct(productDto);
     // request(
     //   'http://ipfs.gen.foundation:8080/ipfs/QmRpccpyAod9U2y1NY7CRznxVLcNweiGfK85xg3H8Tp2g7',
@@ -90,14 +88,20 @@ export class ProductController {
     @UploadedFiles() files: Express.Multer.File[],
     @Query('product_id') uploadImageDto: UploadImageDto['product_id'], //⚠️dto transform 동작안됨
   ): Promise<any> {
+    const list = [];
     await Promise.all(
       files.map(async (file: Express.Multer.File) => {
-        await this.productService.uploadImages(file, uploadImageDto);
+        const url = await this.productService.uploadImages(
+          file,
+          uploadImageDto,
+        );
+        list.push(url);
       }),
     );
 
     return {
       success: true,
+      data: list,
     };
   }
 }

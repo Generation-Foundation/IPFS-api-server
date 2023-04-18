@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { FileUploadDto } from '../dto/fileUpload.dto';
-import { CreateDto, ProductDto } from 'src/dto/product.dto';
+import { CreateDto, UpdatetDto } from 'src/dto/product.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ethers } from 'ethers';
-import { metamask, otcContract } from '../constants/constants';
 import * as AWS from 'aws-sdk';
 import { UploadImageDto } from 'src/dto/query.dto';
 
@@ -32,13 +29,21 @@ export class ProductService {
         price: true,
         limit_of_sales: true,
         thumbnail_url: true,
-        Product_required_token: true,
+        Product_required_token: {
+          select: {
+            Token: {
+              select: {
+                symbol: true,
+              },
+            },
+          },
+        },
       },
       where: {
         status: true,
       },
     });
-    return productList;
+    return { success: true, data: productList };
     // const mapped = productList.map((value) => {
     //   return {
     //     title: value.title,
@@ -52,7 +57,9 @@ export class ProductService {
 
     // return { success: true, message: 'getProductList', data: mapped };
   }
-  async findProduct(id: ProductDto['product_id']): Promise<any> {
+
+  //단일 상품 조회
+  async findProduct(id: number): Promise<any> {
     const found = await this.prismaService.product.findUnique({
       where: {
         id: Number(id),
@@ -77,16 +84,16 @@ export class ProductService {
   }
 
   //입력한 내용으로 업데이트
-  async updateProduct(productDto: ProductDto): Promise<any> {
+  async updateProduct(productDto: UpdatetDto): Promise<any> {
     const {
       product_id,
       title,
       content,
       price,
       limit_of_sales,
-      thumbnail_url,
-      seller,
       token,
+      is_public,
+      thumbnail_url,
     } = productDto;
 
     //사용되는 토큰의 id 가져오기
@@ -113,7 +120,8 @@ export class ProductService {
         price: price,
         limit_of_sales: limit_of_sales,
         thumbnail_url: thumbnail_url,
-        seller: seller,
+        is_public: is_public,
+        updated_at: new Date(),
       },
     });
 
@@ -144,15 +152,8 @@ export class ProductService {
       Body: file.buffer,
     };
     const uploadResult = await this.s3.upload(params).promise();
-    await this.prismaService.product.update({
-      where: {
-        id: Number(uploadImageDto),
-      },
-      data: {
-        thumbnail_url: uploadResult.Location,
-      },
-    });
-    return { success: true };
+
+    return { success: true, data: uploadResult.Location };
   }
 
   async uploadImages(
@@ -168,15 +169,7 @@ export class ProductService {
     };
 
     const uploadResult = await this.s3.upload(params).promise();
-
-    const updated = await this.prismaService.product_image.create({
-      data: {
-        product_id: Number(uploadImageDto),
-        url: uploadResult.Location,
-        sequence: 0, //⚠️ 순서 어떻게 받을지 고민
-      },
-    });
-    console.log(updated);
+    return uploadResult.Location;
   }
 
   // //컨트랙 체크
