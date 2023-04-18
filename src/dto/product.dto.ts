@@ -12,14 +12,10 @@ export class CreateDto {
   account: string;
 }
 
-export class ProductDto {
+export class UpdatetDto {
   @IsNotEmpty()
   @IsNumber()
   product_id: number;
-
-  @IsNotEmpty()
-  @IsString()
-  seller: string;
 
   @IsNotEmpty()
   @IsString()
