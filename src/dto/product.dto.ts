@@ -12,10 +12,14 @@ export class CreateDto {
   account: string;
 }
 
-export class UpdatetDto {
+export class ProductDto {
   @IsNotEmpty()
   @IsNumber()
   product_id: number;
+
+  @IsNotEmpty()
+  @IsString()
+  seller: string;
 
   @IsNotEmpty()
   @IsString()
@@ -34,12 +38,12 @@ export class UpdatetDto {
   price: string;
 
   @IsNotEmpty()
-  @IsBoolean()
-  is_public: boolean;
+  @IsString()
+  thumbnail_url: string;
 
   @IsNotEmpty()
   @IsBoolean()
-  status: boolean;
+  is_public: boolean;
 
   @IsNotEmpty()
   @IsNumber()
