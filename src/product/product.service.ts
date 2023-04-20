@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateDto, UpdatetDto } from 'src/dto/product.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as AWS from 'aws-sdk';
-import { UploadImageDto } from 'src/dto/query.dto';
+import ethers from 'ethers';
 
 AWS.config.update({
   region: process.env.AWS_REGION,
@@ -24,11 +24,15 @@ export class ProductService {
   async findAllProduct(): Promise<any> {
     const productList = await this.prismaService.product.findMany({
       select: {
+        id: true,
+        is_public: true,
         title: true,
         content: true,
         price: true,
+        volume_to_sales: true,
         limit_of_sales: true,
         thumbnail_url: true,
+
         Product_required_token: {
           select: {
             Token: {
@@ -59,42 +63,67 @@ export class ProductService {
   }
 
   //단일 상품 조회
-  async findProduct(id: number): Promise<any> {
+  async findProduct(id: string): Promise<any> {
     const found = await this.prismaService.product.findUnique({
+      select: {
+        id: true,
+        title: true,
+        seller: true,
+        content: true,
+        price: true,
+        volume_to_sales: true,
+        limit_of_sales: true,
+        thumbnail_url: true,
+        Product_required_token: {
+          select: {
+            Token: {
+              select: {
+                symbol: true,
+              },
+            },
+          },
+        },
+        Product_image: {
+          select: {
+            image_url: true,
+          },
+        },
+      },
       where: {
         id: Number(id),
       },
     });
-    return found;
+    return { success: true, data: found };
   }
 
   //최초 생성
   async createProduct(createDto: CreateDto): Promise<any> {
-    const { account } = createDto;
-    const createProductResult = await this.prismaService.product.create({
-      data: {
-        seller: account,
-        title: '',
-        content: '',
-        price: '0',
-        thumbnail_url: '',
-      },
-    });
-    return createProductResult;
-  }
-
-  //입력한 내용으로 업데이트
-  async updateProduct(productDto: UpdatetDto): Promise<any> {
     const {
-      product_id,
+      account,
       title,
       content,
       price,
-      limit_of_sales,
       token,
+      limit_of_sales,
       is_public,
       thumbnail_url,
-    } = productDto;
+      image_url,
+      download_url,
+      platform,
+    } = createDto;
+
+    const date: any = new Date();
+    const unixDate = date / 1000;
+    const overOfPoint = unixDate.toString().split('.')[0];
+    const underOfPoint = unixDate.toString().split('.')[1];
+    const convertedUnixDate =
+      underOfPoint.length == 3
+        ? overOfPoint + underOfPoint
+        : overOfPoint + underOfPoint + '0';
+
+    const regex = /[^1-9]/g;
+    const convertedCid = download_url.replace(regex, '');
+    const fileid = convertedUnixDate + convertedCid;
 
     //사용되는 토큰의 id 가져오기
     const tokenList = await Promise.all(
@@ -110,20 +139,101 @@ export class ProductService {
       }),
     );
 
+    const createProductResult = await this.prismaService.product.create({
+      data: {
+        seller: account,
+        title: title,
+        content: content,
+        price: price,
+        limit_of_sales: Number(limit_of_sales),
+        is_public: is_public,
+        thumbnail_url: thumbnail_url,
+        Product_required_token: {
+          create: tokenList.map((item) => {
+            return {
+              token_id: item.id,
+            };
+          }),
+        },
+        Product_image: {
+          create: image_url.map((item) => {
+            return {
+              image_url: item,
+            };
+          }),
+        },
+        File: {
+          create: {
+            file_id: fileid,
+            download_url:
+              platform === 'ipfs'
+                ? `https://ipfs.gen.foundation/ipfs/${download_url}`
+                : download_url,
+            uploaded_platform: platform,
+          },
+        },
+      },
+    });
+    return createProductResult;
+  }
+
+  //입력한 내용으로 업데이트
+  async updateProduct(updateDto: UpdatetDto): Promise<any> {
+    const {
+      product_id,
+      title,
+      content,
+      price,
+      status,
+      limit_of_sales,
+      token,
+      is_public,
+      thumbnail,
+      image_url,
+    } = updateDto;
+
+    //사용되는 토큰의 id 가져오기
+    const tokenList = await Promise.all(
+      token.map((item) => {
+        return this.prismaService.token.findFirst({
+          select: {
+            id: true,
+          },
+          where: {
+            symbol: item,
+          },
+        });
+      }),
+    );
     const updatedProductResult = await this.prismaService.product.update({
       where: {
         id: product_id,
       },
       data: {
         title: title,
+        status: status,
         content: content,
         price: price,
         limit_of_sales: limit_of_sales,
-        thumbnail_url: thumbnail_url,
+        thumbnail_url: thumbnail,
         is_public: is_public,
         updated_at: new Date(),
       },
     });
+
+    // await this.prismaService.product_image.upsert({
+    //   where: {
+    //     product_id: product_id,
+    //   },
+    //   update: {
+    //     image_url: image_url,
+
+    //   },
+    //   create: {
+    //     product_id: updatedProductResult.id,
+    //     image_url: image_url,
+    //   },
+    // });
 
     //상품의 id와 사용되는 토큰 저장
     await Promise.all(
@@ -140,26 +250,7 @@ export class ProductService {
     return { success: true };
   }
 
-  async uploadThumbnail(
-    file: Express.Multer.File,
-    uploadImageDto: UploadImageDto['product_id'],
-  ): Promise<any> {
-    const key = `${Date.now() + file.originalname}`;
-    const params = {
-      Bucket: process.env.AWS_BUCKET_NAME,
-      ACL: 'private',
-      Key: key,
-      Body: file.buffer,
-    };
-    const uploadResult = await this.s3.upload(params).promise();
-
-    return { success: true, data: uploadResult.Location };
-  }
-
-  async uploadImages(
-    file: Express.Multer.File,
-    uploadImageDto: UploadImageDto['product_id'],
-  ): Promise<any> {
+  async uploadImages(file: Express.Multer.File): Promise<any> {
     const key = `${Date.now() + file.originalname}`;
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
@@ -172,9 +263,9 @@ export class ProductService {
     return uploadResult.Location;
   }
 
-  // //컨트랙 체크
-  // async test(fileid: FileUploadDto['cid']): Promise<any> {
-  //   const metamaskPrivateKey = metamask.privateKey;
+  //컨트랙 체크
+  // async checkTransactions(): Promise<any> {
+  //   const metamaskPrivateKey = .privateKey;
   //   const provider = new ethers.JsonRpcProvider(metamask.testNetURL);
   //   const signer = new ethers.Wallet(metamaskPrivateKey, provider);
   //   const otcAddress = otcContract.otcAddress;
@@ -184,7 +275,6 @@ export class ProductService {
   //   //OTC컨트랙트 수정 후 세부 로직 추가 필요
   //   const foundFileId = await this.prismaService.file.findUnique({
   //     select: {
-
   //       mimetype: true,
   //     },
   //     where: {

@@ -28,7 +28,7 @@ export class ProductController {
   }
 
   @Get('/detail/:id')
-  async getProduct(@Param('id') id: number): Promise<any> {
+  async getProduct(@Param('id') id: string): Promise<any> {
     const result = await this.productService.findProduct(id);
     return result;
   }
@@ -36,7 +36,6 @@ export class ProductController {
   @Post('/create')
   // @UseGuards(JwtAuthGuard)
   async createProduct(@Body() createDto: CreateDto): Promise<any> {
-    console.log(createDto);
     const result = await this.productService.createProduct(createDto);
 
     return result;
@@ -54,6 +53,12 @@ export class ProductController {
     return result;
   }
 
+  // @Post('/transactions')
+  // async validTransactions() {
+  //   const result = await this.productService.checkTransactions();
+  //   return result;
+  // }
+
   // @Post('contract/:fileid')
   // @UseGuards(JwtAuthGuard)
   // async checkContract(
@@ -69,39 +74,19 @@ export class ProductController {
   //   return result;
   // }
 
-  @Post('/thumbnail') //jpg 불가능
-  @UseInterceptors(FileInterceptor('file'))
-  async addThumbnail(
-    @UploadedFile() file: Express.Multer.File,
-    @Query('product_id') uploadImageDto: UploadImageDto['product_id'], //⚠️dto transform 동작안됨
-  ): Promise<any> {
-    const result = await this.productService.uploadThumbnail(
-      file,
-      uploadImageDto,
-    );
-    return result;
-  }
-
   @Post('/image') //jpg 불가능
   @UseInterceptors(FilesInterceptor('files', 5))
-  async addImages(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Query('product_id') uploadImageDto: UploadImageDto['product_id'], //⚠️dto transform 동작안됨
-  ): Promise<any> {
+  async addImages(@UploadedFiles() files: Express.Multer.File[]): Promise<any> {
     const list = [];
     await Promise.all(
       files.map(async (file: Express.Multer.File) => {
-        const url = await this.productService.uploadImages(
-          file,
-          uploadImageDto,
-        );
+        const url = await this.productService.uploadImages(file);
         list.push(url);
       }),
     );
-
     return {
       success: true,
-      data: list,
+      list: list,
     };
   }
 }
