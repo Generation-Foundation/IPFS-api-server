@@ -19,6 +19,9 @@ model File {
   uploaded_at DateTime @default(now())
 
   Product Product @relation(fields: [product_id], references: [id])
+  
+  @@index([product_id], name: "product_id")
+  @@index([uploaded_platform], name: "uploaded_platform")
 }
 
 model Product {
@@ -29,7 +32,7 @@ model Product {
   price String //상품가격
   thumbnail_url String
   is_public Boolean @default(true) //공개, 비공개
-  status Boolean @default(false) //판매중 or 판매중지
+  status Boolean @default(true) //판매중 or 판매중지
   volume_to_sales Int @default(0) //판매량
   limit_of_sales Int @default(1) //최대 판매량
   created_at DateTime @default(now())
@@ -50,13 +53,11 @@ model Product {
 model Product_image {
   id      Int     @id @default(autoincrement())
   product_id Int
-  image_url_1 String
-  image_url_2 String
-  image_url_3 String
-  image_url_4 String
-  image_url_5 String
+  image_url String
   
   Product Product @relation(fields: [product_id], references: [id])
+
+   @@index([product_id], name: "product_id")
 }
 
 model Token {
