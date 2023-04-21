@@ -7,7 +7,7 @@ package-lock.json
 .env
 
 #constants
-/src/constants
+/src/utils/constants.ts
 
 #migration
 /prisma/migrations

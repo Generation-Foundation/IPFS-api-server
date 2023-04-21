@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { ProductService } from './product.service';
-import { UpdatetDto, CreateDto } from 'src/dto/product.dto';
+import { UpdateDto, CreateDto } from 'src/dto/product.dto';
 import { JwtAuthGuard } from '../guards/auth.guard';
 import { UploadImageDto } from 'src/dto/query.dto';
 
@@ -43,13 +43,8 @@ export class ProductController {
 
   @Post('/update')
   // @UseGuards(JwtAuthGuard)
-  async uploadProduct(@Body() productDto: UpdatetDto): Promise<any> {
-    const result = await this.productService.updateProduct(productDto);
-    // request(
-    //   'http://ipfs.gen.foundation:8080/ipfs/QmRpccpyAod9U2y1NY7CRznxVLcNweiGfK85xg3H8Tp2g7',
-    // ).pipe(
-    //   res.set('Content-Disposition', 'attachment; filename=some_file_name.jpg'),
-    // );
+  async uploadProduct(@Body() updateDto: UpdateDto): Promise<any> {
+    const result = await this.productService.updateProduct(updateDto);
     return result;
   }
 

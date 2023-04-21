@@ -50,7 +50,7 @@ export class CreateDto {
   platform: string;
 }
 
-export class UpdatetDto {
+export class UpdateDto {
   @IsNotEmpty()
   @IsNumber()
   product_id: number;
@@ -72,14 +72,6 @@ export class UpdatetDto {
   price: string;
 
   @IsNotEmpty()
-  @IsString()
-  thumbnail: string;
-
-  @IsNotEmpty()
-  @IsArray()
-  image_url: Array<string>;
-
-  @IsNotEmpty()
   @IsBoolean()
   status: boolean;
 
@@ -90,4 +82,18 @@ export class UpdatetDto {
   @IsNotEmpty()
   @IsNumber()
   limit_of_sales: number;
+
+  @IsString()
+  thumbnail_url: string;
+
+  @IsArray()
+  image_url: Array<string>;
+
+  @IsNotEmpty()
+  @IsString()
+  download_url: string;
+
+  @IsNotEmpty()
+  @IsString()
+  platform: string;
 }

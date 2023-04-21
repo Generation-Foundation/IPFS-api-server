@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { CreateDto, UpdatetDto } from 'src/dto/product.dto';
+import { CreateDto, UpdateDto } from 'src/dto/product.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as AWS from 'aws-sdk';
-import ethers from 'ethers';
+import { ethers } from 'ethers';
+import { uuid } from 'uuidv4';
+import { NETWORK, API_KEY, ABI, CONTRACT } from 'src/utils/constants';
 
 AWS.config.update({
   region: process.env.AWS_REGION,
@@ -10,6 +12,9 @@ AWS.config.update({
 @Injectable()
 export class ProductService {
   private readonly s3: any;
+  private goerliProvider: ethers.JsonRpcProvider;
+  private goerliSigner: ethers.Wallet;
+  private otcContract: ethers.Contract;
   constructor(private prismaService: PrismaService) {
     AWS.config.update({
       region: process.env.AWS_REGION,
@@ -19,6 +24,16 @@ export class ProductService {
       },
     });
     this.s3 = new AWS.S3();
+    this.goerliProvider = new ethers.JsonRpcProvider(NETWORK.ARB_GOERLI);
+    this.goerliSigner = new ethers.Wallet(
+      API_KEY.ALEX_PRIVATE_KEY,
+      this.goerliProvider,
+    );
+    this.otcContract = new ethers.Contract(
+      CONTRACT.ARB_OTC,
+      ABI.OTC_ABI,
+      this.goerliSigner,
+    );
   }
   //전체 상품 조회
   async findAllProduct(): Promise<any> {
@@ -112,18 +127,7 @@ export class ProductService {
       platform,
     } = createDto;
 
-    const date: any = new Date();
-    const unixDate = date / 1000;
-    const overOfPoint = unixDate.toString().split('.')[0];
-    const underOfPoint = unixDate.toString().split('.')[1];
-    const convertedUnixDate =
-      underOfPoint.length == 3
-        ? overOfPoint + underOfPoint
-        : overOfPoint + underOfPoint + '0';
-
-    const regex = /[^1-9]/g;
-    const convertedCid = download_url.replace(regex, '');
-    const fileid = convertedUnixDate + convertedCid;
+    const fileid = uuid();
 
     //사용되는 토큰의 id 가져오기
     const tokenList = await Promise.all(
@@ -178,19 +182,23 @@ export class ProductService {
   }
 
   //입력한 내용으로 업데이트
-  async updateProduct(updateDto: UpdatetDto): Promise<any> {
+  async updateProduct(updateDto: UpdateDto): Promise<any> {
     const {
       product_id,
       title,
       content,
       price,
+      token,
       status,
       limit_of_sales,
-      token,
       is_public,
-      thumbnail,
+      thumbnail_url,
       image_url,
+      download_url,
+      platform,
     } = updateDto;
+
+    const fileid = uuid();
 
     //사용되는 토큰의 id 가져오기
     const tokenList = await Promise.all(
@@ -215,37 +223,38 @@ export class ProductService {
         content: content,
         price: price,
         limit_of_sales: limit_of_sales,
-        thumbnail_url: thumbnail,
+        thumbnail_url: thumbnail_url,
         is_public: is_public,
         updated_at: new Date(),
+        Product_required_token: {
+          deleteMany: {},
+          create: tokenList.map((item) => {
+            return {
+              token_id: item.id,
+            };
+          }),
+        },
+        Product_image: {
+          deleteMany: {},
+          create: image_url.map((item) => {
+            return {
+              image_url: item,
+            };
+          }),
+        },
+        File: {
+          update: {
+            file_id: fileid,
+            download_url:
+              platform === 'ipfs'
+                ? `https://ipfs.gen.foundation/ipfs/${download_url}`
+                : download_url,
+            uploaded_platform: platform,
+          },
+        },
       },
     });
-
-    // await this.prismaService.product_image.upsert({
-    //   where: {
-    //     product_id: product_id,
-    //   },
-    //   update: {
-    //     image_url: image_url,
-
-    //   },
-    //   create: {
-    //     product_id: updatedProductResult.id,
-    //     image_url: image_url,
-    //   },
-    // });
-
-    //상품의 id와 사용되는 토큰 저장
-    await Promise.all(
-      tokenList.map((item) => {
-        return this.prismaService.product_required_token.create({
-          data: {
-            product_id: updatedProductResult.id,
-            token_id: item.id,
-          },
-        });
-      }),
-    );
+    console.log(updatedProductResult);
 
     return { success: true };
   }
@@ -263,30 +272,26 @@ export class ProductService {
     return uploadResult.Location;
   }
 
-  //컨트랙 체크
+  // //컨트랙 체크
   // async checkTransactions(): Promise<any> {
-  //   const metamaskPrivateKey = .privateKey;
-  //   const provider = new ethers.JsonRpcProvider(metamask.testNetURL);
-  //   const signer = new ethers.Wallet(metamaskPrivateKey, provider);
-  //   const otcAddress = otcContract.otcAddress;
-  //   const otcAbi = otcContract.otcContractAbi;
-  //   const contract = new ethers.Contract(otcAddress, otcAbi, signer);
-
+  //   // console.log(await this.otcContract?.completedOtcLength());
+  //   const a = ethers.formatEther(await this.otcContract?.completedOtcLength());
+  //   console.log(a);
+  //   const tx = await this.otcContract?.createOtc(
+  //     'OTC_TYPE_FILE', // otc_type
+  //     '0x179b734D0291Fa9E3a4728C7c27866EE25CCC3e0', //결제토큰 주소
+  //     '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+  //     '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+  //     '1681960929018', //fileid
+  //     '1681960929018', //fileid
+  //   );
   //   //OTC컨트랙트 수정 후 세부 로직 추가 필요
-  //   const foundFileId = await this.prismaService.file.findUnique({
-  //     select: {
-  //       mimetype: true,
-  //     },
-  //     where: {
-  //       file_id: fileid,
-  //     },
-  //   });
 
   //   return {
   //     success: true,
   //     message: '유효한 fileid 입니다.',
   //     data: {
-  //       URL: `http://ipfs.gen.foundation:8080/ipfs/${foundFileId.cid}`,
+  //       // URL: `http://ipfs.gen.foundation:8080/ipfs/${foundFileId.cid}`,
   //     },
   //   };
   // }
