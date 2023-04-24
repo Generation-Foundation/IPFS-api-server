@@ -14,7 +14,7 @@ model File {
   id      Int     @id @default(autoincrement())
   product_id Int @unique
   file_id String @unique
-  meme_type String
+  mime_type String
   download_url  String
   uploaded_platform String //업로드한 플랫폼
   uploaded_at DateTime @default(now())
