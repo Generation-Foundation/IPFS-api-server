@@ -14,6 +14,7 @@ model File {
   id      Int     @id @default(autoincrement())
   product_id Int @unique
   file_id String @unique
+  meme_type String
   download_url  String
   uploaded_platform String //업로드한 플랫폼
   uploaded_at DateTime @default(now())
@@ -28,7 +29,7 @@ model Product {
   id      Int     @id @default(autoincrement())
   seller String //판매자
   title  String //상품명
-  content String //상품설명
+  description String //상품설명
   price String //상품가격
   thumbnail_url String
   is_public Boolean @default(true) //공개, 비공개
@@ -77,8 +78,6 @@ model Product_required_token {
   Product Product @relation(fields: [product_id], references: [id])
   Token Token @relation(fields: [token_id], references: [id])
 
-  Order_history Order_history[] // N:M 관계
-
   @@index([product_id], name: "product_id")
   @@index([token_id], name: "token_id")
 }
@@ -86,16 +85,13 @@ model Product_required_token {
 model Order_history {
   id      Int     @id @default(autoincrement())
   product_id  Int 
-  product_buyer String
-  exchange_rate String
-  token String
-  status String @default("ORDER_COMPLETE") //거래완료 or 거래취소(환불)
+  consumer String //구매자
+  status Boolean @default(true) //true:거래완료,  false:거래취소(환불)
   created_at DateTime @default(now())
   
   Product Product @relation(fields: [product_id], references: [id])
 
   Report_record Report_record? //1:1 관계
-  Product_required_token Product_required_token[] //N:M 관계
 }
 
 model Report_record {
