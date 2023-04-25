@@ -10,16 +10,26 @@ import {
   UploadedFiles,
   UseInterceptors,
   Query,
+  Header,
 } from '@nestjs/common';
 import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { ProductService } from './product.service';
 import { UpdateDto, CreateDto } from 'src/dto/product.dto';
 import { JwtAuthGuard } from '../guards/auth.guard';
 import { UploadImageDto } from 'src/dto/query.dto';
+import { map } from 'rxjs/operators';
+import { request } from 'https';
+// import type { Response } from 'express';
+import { Request, Response } from 'express';
+import { HttpService } from '@nestjs/axios';
+import * as fs from 'fs';
 
 @Controller('product')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly httpService: HttpService,
+  ) {}
 
   @Get('/all')
   async getAllProduct(): Promise<any> {
@@ -37,7 +47,6 @@ export class ProductController {
   // @UseGuards(JwtAuthGuard)
   async createProduct(@Body() createDto: CreateDto): Promise<any> {
     const result = await this.productService.createProduct(createDto);
-
     return result;
   }
 
@@ -48,26 +57,37 @@ export class ProductController {
     return result;
   }
 
-  // @Post('/transactions')
-  // async validTransactions() {
-  //   const result = await this.productService.checkTransactions();
-  //   return result;
-  // }
-
-  // @Post('contract/:fileid')
+  @Post('/delete/:id')
   // @UseGuards(JwtAuthGuard)
-  // async checkContract(
-  //   @Param('fileid') fileid: FileUploadDto['cid'],
-  //   @Res() res: Response,
-  // ): Promise<any> {
-  //   const result = await this.productService.test(fileid);
-  //   // request(
-  //   //   'http://ipfs.gen.foundation:8080/ipfs/QmRpccpyAod9U2y1NY7CRznxVLcNweiGfK85xg3H8Tp2g7',
-  //   // ).pipe(
-  //   //   res.set('Content-Disposition', 'attachment; filename=some_file_name.jpg'),
-  //   // );
-  //   return result;
-  // }
+  async deleteProduct(@Param('id') id: string): Promise<any> {
+    const result = await this.productService.deleteProduct(id);
+    return result;
+  }
+
+  @Get('/order/:id')
+  async validTransactions(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ): Promise<any> {
+    try {
+      const result = await this.productService.checkTransactions(id);
+
+      const response = await this.httpService
+        .get(result.url, { responseType: 'stream' })
+        .toPromise();
+      const contentType = response.headers['content-type'];
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=file.${result.type}`,
+      );
+
+      response.data.pipe(res);
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   @Post('/image') //jpg 불가능
   @UseInterceptors(FilesInterceptor('files', 5))
@@ -84,4 +104,18 @@ export class ProductController {
       list: list,
     };
   }
+
+  // @Get('asdf/asdf')
+  // getFile(@Res({ passthrough: true }) res: Response): StreamableFile {
+  //   const file = createReadStream(
+  //     join(
+  //       'https://ipfs.gen.foundation/ipfs/QmeKrfc5zV1Giy3j6fVAV75fXRDHJJ25Yob1CGfNTaLyJ9',
+  //     ),
+  //   );
+  //   res.set({
+  //     'Content-Type': 'application/json',
+  //     'Content-Disposition': 'attachment; filename="package.json"',
+  //   });
+  //   return new StreamableFile(file);
+  // }
 }

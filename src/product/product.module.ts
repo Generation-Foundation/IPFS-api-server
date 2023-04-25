@@ -8,7 +8,7 @@ import { PrismaService } from 'prisma/prisma.service';
   imports: [
     HttpModule.registerAsync({
       useFactory: () => ({
-        timeout: 3000,
+        timeout: 180000, //파일 최대 용량, 인터넷 속도 등 고려해서 설정할 필요 있음
         maxRedirects: 5,
       }),
     }),

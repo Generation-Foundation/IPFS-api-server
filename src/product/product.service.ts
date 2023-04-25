@@ -6,6 +6,12 @@ import { ethers } from 'ethers';
 import { uuid } from 'uuidv4';
 import { NETWORK, API_KEY, ABI, CONTRACT } from 'src/utils/constants';
 
+import { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
+import { HttpService } from '@nestjs/axios';
+import { type } from 'os';
+
 AWS.config.update({
   region: process.env.AWS_REGION,
 });
@@ -15,7 +21,11 @@ export class ProductService {
   private goerliProvider: ethers.JsonRpcProvider;
   private goerliSigner: ethers.Wallet;
   private otcContract: ethers.Contract;
-  constructor(private prismaService: PrismaService) {
+
+  constructor(
+    private prismaService: PrismaService,
+    private readonly httpService: HttpService,
+  ) {
     AWS.config.update({
       region: process.env.AWS_REGION,
       credentials: {
@@ -42,7 +52,7 @@ export class ProductService {
         id: true,
         is_public: true,
         title: true,
-        content: true,
+        description: true,
         price: true,
         volume_to_sales: true,
         limit_of_sales: true,
@@ -62,6 +72,7 @@ export class ProductService {
         status: true,
       },
     });
+
     return { success: true, data: productList };
     // const mapped = productList.map((value) => {
     //   return {
@@ -84,7 +95,7 @@ export class ProductService {
         id: true,
         title: true,
         seller: true,
-        content: true,
+        description: true,
         price: true,
         volume_to_sales: true,
         limit_of_sales: true,
@@ -116,7 +127,7 @@ export class ProductService {
     const {
       account,
       title,
-      content,
+      description,
       price,
       token,
       limit_of_sales,
@@ -125,6 +136,7 @@ export class ProductService {
       image_url,
       download_url,
       platform,
+      type,
     } = createDto;
 
     const fileid = uuid();
@@ -147,7 +159,7 @@ export class ProductService {
       data: {
         seller: account,
         title: title,
-        content: content,
+        description: description,
         price: price,
         limit_of_sales: Number(limit_of_sales),
         is_public: is_public,
@@ -169,9 +181,10 @@ export class ProductService {
         File: {
           create: {
             file_id: fileid,
+            mime_type: type,
             download_url:
               platform === 'ipfs'
-                ? `https://ipfs.gen.foundation/ipfs/${download_url}`
+                ? `https://ipfs_auth:ipfs!@ipfs.gen.foundation/ipfs/${download_url}`
                 : download_url,
             uploaded_platform: platform,
           },
@@ -186,7 +199,7 @@ export class ProductService {
     const {
       product_id,
       title,
-      content,
+      description,
       price,
       token,
       status,
@@ -220,7 +233,7 @@ export class ProductService {
       data: {
         title: title,
         status: status,
-        content: content,
+        description: description,
         price: price,
         limit_of_sales: limit_of_sales,
         thumbnail_url: thumbnail_url,
@@ -247,15 +260,26 @@ export class ProductService {
             file_id: fileid,
             download_url:
               platform === 'ipfs'
-                ? `https://ipfs.gen.foundation/ipfs/${download_url}`
+                ? `https://ipfs_auth:ipfs!@ipfs.gen.foundation/ipfs/${download_url}`
                 : download_url,
             uploaded_platform: platform,
           },
         },
       },
     });
-    console.log(updatedProductResult);
 
+    return { success: true };
+  }
+
+  async deleteProduct(id: string): Promise<any> {
+    await this.prismaService.product.update({
+      where: {
+        id: Number(id),
+      },
+      data: {
+        status: false,
+      },
+    });
     return { success: true };
   }
 
@@ -272,27 +296,57 @@ export class ProductService {
     return uploadResult.Location;
   }
 
-  // //컨트랙 체크
-  // async checkTransactions(): Promise<any> {
-  //   // console.log(await this.otcContract?.completedOtcLength());
-  //   const a = ethers.formatEther(await this.otcContract?.completedOtcLength());
-  //   console.log(a);
-  //   const tx = await this.otcContract?.createOtc(
-  //     'OTC_TYPE_FILE', // otc_type
-  //     '0x179b734D0291Fa9E3a4728C7c27866EE25CCC3e0', //결제토큰 주소
-  //     '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
-  //     '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
-  //     '1681960929018', //fileid
-  //     '1681960929018', //fileid
-  //   );
-  //   //OTC컨트랙트 수정 후 세부 로직 추가 필요
+  //구매
+  async checkTransactions(product_id: string): Promise<any> {
+    // console.log(await this.otcContract?.completedOtcLength());
+    const a = ethers.formatEther(await this.otcContract?.completedOtcLength());
+    console.log(a);
+    // const tx = await this.otcContract?.createOtc(
+    //   'OTC_TYPE_FILE', // otc_type
+    //   '0x179b734D0291Fa9E3a4728C7c27866EE25CCC3e0', //결제토큰 주소
+    //   '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+    //   '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+    //   '1681960929018', //fileid
+    //   '1681960929018', //fileid
+    // );
+    // console.log(tx);
+    //OTC컨트랙트 수정 후 세부 로직 추가 필요
+    //컨트랙트 확인해서 구매한 사람이 맞는지 확인
+    //구매한 사람이 맞으면 구매 이력 생성
 
-  //   return {
-  //     success: true,
-  //     message: '유효한 fileid 입니다.',
-  //     data: {
-  //       // URL: `http://ipfs.gen.foundation:8080/ipfs/${foundFileId.cid}`,
-  //     },
-  //   };
-  // }
+    await this.prismaService.order_history.create({
+      data: {
+        consumer: 'test1',
+        product_id: Number(product_id),
+      },
+    });
+
+    const foundUrl = await this.prismaService.file.findFirst({
+      select: {
+        download_url: true,
+        mime_type: true,
+      },
+      where: {
+        product_id: Number(product_id),
+      },
+    });
+    return { url: foundUrl.download_url, type: foundUrl.mime_type };
+    // const writer = fs.createWriteStream(foundUrl.download_url);
+
+    // const response = await this.httpService.axiosRef({
+    //   url: foundUrl.download_url,
+    //   method: 'GET',
+    //   responseType: 'stream',
+    //   headers: {
+    //     'basic-auth': 'ipfs_auth:ipfs!',
+    //   },
+    // });
+
+    // response.data.pipe(writer);
+
+    // return new Promise((resolve, reject) => {
+    //   writer.on('finish', resolve);
+    //   writer.on('error', reject);
+    // });
+  }
 }
