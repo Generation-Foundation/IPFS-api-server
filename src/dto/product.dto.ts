@@ -17,7 +17,7 @@ export class CreateDto {
 
   @IsNotEmpty()
   @IsString()
-  content: string;
+  description: string;
 
   @IsNotEmpty()
   @IsArray()
@@ -47,6 +47,10 @@ export class CreateDto {
 
   @IsNotEmpty()
   @IsString()
+  type: string;
+
+  @IsNotEmpty()
+  @IsString()
   platform: string;
 }
 
@@ -61,7 +65,7 @@ export class UpdateDto {
 
   @IsNotEmpty()
   @IsString()
-  content: string;
+  description: string;
 
   @IsNotEmpty()
   @IsArray()
